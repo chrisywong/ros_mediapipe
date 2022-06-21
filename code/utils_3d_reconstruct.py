@@ -1,9 +1,9 @@
 ###############################################################################
 ### Useful function for 3D reconstruction from multiple images
-### 
+###
 ### First requirement is to obtain camera intrinsics and extrinsics parameters
 ### Refer to Calibration class
-### 
+###
 ### Next use triangulation/direct linear transformation (DLT)
 ### To reconstruct 3D points from 2D image points
 ###############################################################################
@@ -22,13 +22,13 @@ class Calibration:
 
         self.chessboard_size    = chessboard_size
         self.chessboard_sq_size = chessboard_sq_size
-        
+
         # Prepare 3D object points in real world space
         self.obj_pts = np.zeros((chessboard_size[0]*chessboard_size[1],3), np.float32)
         # [[0,0,0], [1,0,0], [2,0,0] ....,[9,6,0]]
-        self.obj_pts[:,:2] = np.mgrid[0:chessboard_size[0],0:chessboard_size[1]].T.reshape(-1,2) 
+        self.obj_pts[:,:2] = np.mgrid[0:chessboard_size[0],0:chessboard_size[1]].T.reshape(-1,2)
         self.obj_pts *=  chessboard_sq_size # Convert length of each black square to units in meter
-        
+
         # Termination criteria for cornerSubPix
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-3)
 
@@ -48,12 +48,12 @@ class Calibration:
         # Read in filename of .png from folder
         file = glob.glob(folder+'*.png')
         file.sort()
-        
+
         # List to store object point and image point from all images
         objpt = [] # 3d point in real world space
         imgpt = [] # 2d point in image plane
         file_ = [] # Filename of images with success findChessboardCorners
-                
+
         for f in file:
             # Read in image
             img = cv2.imread(f)
@@ -73,7 +73,7 @@ class Calibration:
                 print('Found ChessboardCorners', f)
             else:
                 print('Cannot find ChessboardCorners', f)
-                
+
         # Calibration
         if len(objpt)>0 and len(imgpt)>0:
             print('Calibrating ...')
@@ -86,10 +86,10 @@ class Calibration:
                 img = cv2.imread(f)
 
                 # Draw corners
-                img = cv2.drawChessboardCorners(img, self.chessboard_size, imgpt[i], True)                
+                img = cv2.drawChessboardCorners(img, self.chessboard_size, imgpt[i], True)
 
                 # solvePnp will return the transformation matrix to transform 3D model coordinate to 2D camera coordinate
-                ret, rvec, tvec = cv2.solvePnP(objpt[i], imgpt[i], mat, dist)     
+                ret, rvec, tvec = cv2.solvePnP(objpt[i], imgpt[i], mat, dist)
                 self.project_3Daxis_to_2Dimage(img, mat, dist, rvec, tvec)
 
                 # Save image with new name and extension
@@ -127,7 +127,7 @@ class Calibration:
             # Extract camera index from last few characters of filename
             cam_idx = f.split('/')[-1]
             cam_idx = cam_idx.split('.')[0] # Note: f = '../data/calib_extrin/cam_X.png', where X is camera index
-            
+
             # Read in camera intrinsic
             filepath = '../data/calib_intrin/'+cam_idx+'/intrin.yaml'
             param = yaml.load(open(filepath), Loader=yaml.FullLoader)
@@ -149,26 +149,26 @@ class Calibration:
 
                 # Draw corners
                 img = cv2.drawChessboardCorners(img, self.chessboard_size, corners2, ret)
-                
+
                 # solvePnp will return the transformation matrix to transform 3D model coordinate to 2D camera coordinate
                 ret, rvec, tvec = cv2.solvePnP(self.obj_pts, corners2, mat, dist)
-                self.project_3Daxis_to_2Dimage(img, mat, dist, rvec, tvec)              
-                
+                self.project_3Daxis_to_2Dimage(img, mat, dist, rvec, tvec)
+
                 # Save image with new name and extension
                 f_ = f[:-4] + '_.jpg'
                 cv2.imwrite(f_, img)
                 # Display image
                 cv2.imshow('img'+str(i), img)
-                cv2.waitKey(1)                
+                cv2.waitKey(1)
 
                 # Get reprojection error
                 error = self.get_reprojection_error(
                             np.asarray(self.obj_pts).reshape(-1, 3), # To convert from m list of (n, 3) to (m*n, 3)
                             np.asarray(corners2).reshape(-1, 2), # To convert from m list of (n, 1, 2) to (m*n, 2)
-                            mat, dist, rvec, tvec)                
+                            mat, dist, rvec, tvec)
                 print('Img', f, 'reprojection error', error)
 
-                # Create 4 by 4 homo matrix [R|T] to transform 3D model coordinate to 3D camera coordinate 
+                # Create 4 by 4 homo matrix [R|T] to transform 3D model coordinate to 3D camera coordinate
                 homo_matrix = np.hstack((cv2.Rodrigues(rvec)[0], tvec)) # 3 by 4 matrix
                 homo_matrix = np.vstack((homo_matrix, np.array([0,0,0,1]))) # 4 by 4 matrix
 
@@ -243,7 +243,7 @@ class Calibration:
                 # Flip back image
                 if i>0:
                     img = cv2.flip(img, flipCode=1)
-                    ori = cv2.flip(ori, flipCode=1)                    
+                    ori = cv2.flip(ori, flipCode=1)
 
                 # Display image
                 cv2.imshow('ori', ori)
@@ -253,14 +253,14 @@ class Calibration:
                 error = self.get_reprojection_error(
                             np.asarray(self.obj_pts).reshape(-1, 3), # To convert from m list of (n, 3) to (m*n, 3)
                             np.asarray(corners2).reshape(-1, 2), # To convert from m list of (n, 1, 2) to (m*n, 2)
-                            mat, dist, rvec, tvec)                
+                            mat, dist, rvec, tvec)
                 print('Img', i, 'reprojection error', error)
 
-                # Create 4 by 4 homo matrix [R|T] to transform 3D model coordinate to 3D camera coordinate 
+                # Create 4 by 4 homo matrix [R|T] to transform 3D model coordinate to 3D camera coordinate
                 homo_matrix = np.hstack((cv2.Rodrigues(rvec)[0], tvec)) # 3 by 4 matrix
                 homo_matrix = np.vstack((homo_matrix, np.array([0,0,0,1]))) # 4 by 4 matrix
                 # Note: Inverse matrix to get transformation from image to camera frame
-                homo_matrix = np.linalg.inv(homo_matrix)                
+                homo_matrix = np.linalg.inv(homo_matrix)
 
                 # Save camera extrinsic
                 data = dict(extrin_mat=homo_matrix.tolist())
@@ -280,7 +280,7 @@ class Calibration:
             colours = [(0,0,255),(0,255,0),(255,0,0)] # BGR
             for i in range(1,4):
                 (x0, y0), (x1, y1) = axis_2D[0], axis_2D[i]
-                cv2.line(img, (int(x0), int(y0)), (int(x1), int(y1)), colours[i-1], 3)    
+                cv2.line(img, (int(x0), int(y0)), (int(x1), int(y1)), colours[i-1], 3)
 
 
     def get_reprojection_error(self, p3D, p2D, mat, dist, rvec, tvec):
@@ -325,7 +325,7 @@ class Calibration:
         if row%2==0:
             for r in range(row):
               temp[r*col:r*col+col, :, :] = corners[(row-r-1)*col:(row-r-1)*col+col:, :, :]
-        
+
         # Note: For (col=even,row=odd) checkerboard
         elif col%2==0:
             for r in range(row):
@@ -392,7 +392,7 @@ class Calibration:
                         index += 4
 
                     black = not black # Toggle the flag for next square
-            
+
             if (self.chessboard_size[0]+1)%2 == 0: # Important: Need to check if col is even else will get parallel black strips as for even col the sq in the next row follw the same color
                 black = not black
 
@@ -404,11 +404,11 @@ class Calibration:
         mesh.triangles = o3d.utility.Vector3iVector(triangles)
         mesh.paint_uniform_color([0,0,0]) # Black color
 
-        return mesh        
+        return mesh
 
 
 class Triangulation:
-    def __init__(self, cam_idx, vis=None, use_panoptic_dataset=False):
+    def __init__(self, cam_idx, vis=None, use_panoptic_dataset=False, filename=None, JSONpath=None):
         super(Triangulation, self).__init__()
 
         #############################
@@ -417,22 +417,30 @@ class Triangulation:
         if use_panoptic_dataset:
             data_path = '../data/'
             seq_name  = '171204_pose1_sample'
-            # Load camera calibration param
-            with open(data_path+seq_name+'/calibration_{0}.json'.format(seq_name)) as f:
-                calib = json.load(f)
+            filename = seq_name
+        else:
+            data_path = ''
+            seq_name = JSONpath
 
-            # Cameras are identified by a tuple of (panel#,node#)
-            # Note: 31 HD cameras (0,0) - (0,30), where the zero in the first index means HD camera 
-            cameras = {(cam['panel'],cam['node']):cam for cam in calib['cameras']}
+        # Load camera calibration param
+        with open(data_path+seq_name+'/calibration_{0}.json'.format(filename)) as f:
+            calib = json.load(f)
+            # print(calib)
 
-            # Convert data into numpy arrays for convenience
-            for k, cam in cameras.items():    
-                cam['K'] = np.matrix(cam['K'])
-                cam['distCoef'] = np.array(cam['distCoef'])
-                cam['R'] = np.matrix(cam['R'])
-                cam['t'] = np.array(cam['t'])*0.01 # Convert cm to m
+        # Cameras are identified by a tuple of (panel#,node#)
+        # Note: 31 HD cameras (0,0) - (0,30), where the zero in the first index means HD camera
+        cameras = {(cam['panel'],cam['node']):cam for cam in calib['cameras']}
 
-            # Extract camera index integer from video file name
+        # Convert data into numpy arrays for convenience
+        for k, cam in cameras.items():
+            cam['K'] = np.matrix(cam['K'])
+            cam['distCoef'] = np.array(cam['distCoef'])
+            cam['R'] = np.matrix(cam['R'])
+            cam['t'] = np.array(cam['t'])#*0.01 # Convert cm to m
+            print(k, cam['name'])
+
+        # Extract camera index integer from video file name
+        if use_panoptic_dataset:
             cam_idx_ = []
             for c in cam_idx:
                 # Example of file name
@@ -440,34 +448,39 @@ class Triangulation:
                 value = c.split('_')[-1] # Select the last split (XX.mp4)
                 value = value.split('.')[0] # Select the first split (XX)
                 cam_idx_.append(int(value))
-            
-            # Compute projection matrix
-            self.pmat = []
-            for i in range(len(cam_idx_)):
-                cam = cameras[(0,cam_idx_[i])]
-                extrin_mat = np.zeros((3,4))
+        else:
+            cam_idx_ = cam_idx
+
+        # Compute projection matrix
+        self.pmat = []
+        for i in range(len(cam_idx_)):
+            if use_panoptic_dataset:
+              cam = cameras[(0,cam_idx_[i])]
+            else:
+              cam = calib['cameras'][i]
+            extrin_mat = np.zeros((3,4))
+            extrin_mat[:3,:3] = cam['R']
+            extrin_mat[:3,3:] = cam['t']
+            self.pmat.append(cam['K'] @ extrin_mat)
+
+        #############################
+        ### Visualize camera pose ###
+        #############################
+        # Draw world frame
+        frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
+        vis.add_geometry(frame)
+
+        # Draw camera axis
+        # hd_cam_idx = zip([0] * 30,range(0,30)) # Choose only HD cameras
+        # hd_cameras = [cameras[cam].copy() for cam in hd_cam_idx]
+        for i, cam in enumerate(calib['cameras']):
+            if i in cam_idx_: # Show only those selected camera
+                extrin_mat = np.eye(4)
                 extrin_mat[:3,:3] = cam['R']
                 extrin_mat[:3,3:] = cam['t']
-                self.pmat.append(cam['K'] @ extrin_mat)
-
-            #############################
-            ### Visualize camera pose ###
-            #############################
-            # Draw world frame
-            frame = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.5)
-            vis.add_geometry(frame)
-            
-            # Draw camera axis
-            hd_cam_idx = zip([0] * 30,range(0,30)) # Choose only HD cameras
-            hd_cameras = [cameras[cam].copy() for cam in hd_cam_idx]
-            for i, cam in enumerate(hd_cameras):
-                if i in cam_idx_: # Show only those selected camera
-                    extrin_mat = np.eye(4)
-                    extrin_mat[:3,:3] = cam['R']
-                    extrin_mat[:3,3:] = cam['t']
-                    axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.2)
-                    axis.transform(np.linalg.inv(extrin_mat))
-                    vis.add_geometry(axis)
+                axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.2)
+                axis.transform(np.linalg.inv(extrin_mat))
+                vis.add_geometry(axis)
 
 
     def triangulate_2views(self, param, mode):
@@ -478,12 +491,12 @@ class Triangulation:
 
         elif mode=='holistic':
             _, param_lh, param_rh, param_bd = param[0]
-            p0 = np.vstack((param_lh['keypt'], 
+            p0 = np.vstack((param_lh['keypt'],
                             param_rh['keypt'],
                             param_bd['keypt'])) # [21+21+33/25,2]
-            
+
             _, param_lh, param_rh, param_bd = param[1]
-            p1 = np.vstack((param_lh['keypt'], 
+            p1 = np.vstack((param_lh['keypt'],
                             param_rh['keypt'],
                             param_bd['keypt'])) # [21+21+33/25,2]
 
@@ -492,7 +505,7 @@ class Triangulation:
         p3d = cv2.triangulatePoints(
             self.pmat[0], self.pmat[1],
             p0.T, p1.T) # Note: triangulatePoints requires 2xN arrays, so transpose
-        
+
         # However, homgeneous point is returned so need to divide by last term
         p3d /= p3d[3] # [4,nPt]
         p3d = p3d[:3,:].T # [nPt,3]
@@ -527,7 +540,7 @@ class Triangulation:
             for p in param:
                 _, param_lh, param_rh, param_bd = p
                 p2d.append(np.vstack((
-                            param_lh['keypt'], 
+                            param_lh['keypt'],
                             param_rh['keypt'],
                             param_bd['keypt'])) # [21+21+33/25,2]
                            )
@@ -556,14 +569,14 @@ class Triangulation:
 
 
     def triangulate_point(self, point):
-        # Modified from 
+        # Modified from
         # https://gist.github.com/davegreenwood/e1d2227d08e24cc4e353d95d0c18c914
 
         # Other possible python implementation
         # https://www.mail-archive.com/floatcanvas@mithis.com/msg00513.html
 
         # Also its worthwhile to read through the below link
-        # http://kwon3d.com/theory/dlt/dlt.html 
+        # http://kwon3d.com/theory/dlt/dlt.html
         # For indepth explanation on DLT and many other useful theories
         # required by multicam mocap by Prof Young-Hoo Kwon
 
@@ -593,18 +606,18 @@ class PanopticDataset:
         cameras = {(cam['panel'],cam['node']):cam for cam in calib['cameras']}
 
         # Convert data into numpy arrays for convenience
-        for k, cam in cameras.items():    
+        for k, cam in cameras.items():
             cam['K'] = np.matrix(cam['K'])
             cam['distCoef'] = np.array(cam['distCoef'])
             cam['R'] = np.matrix(cam['R'])
             cam['t'] = np.array(cam['t']).reshape((3,1)) * 0.01 # Convert cm to m
-            
+
         # Choose only HD cameras for visualization
         hd_cam_idx = zip([0] * 30,range(0,30))
         hd_cameras = [cameras[cam].copy() for cam in hd_cam_idx]
 
-        # Select an HD camera (0,0) - (0,30), where the zero in the first index means HD camera 
-        # cam = cameras[(0,5)]        
+        # Select an HD camera (0,0) - (0,30), where the zero in the first index means HD camera
+        # cam = cameras[(0,5)]
 
         # Visualize 3D camera pose
         self.vis = o3d.visualization.Visualizer()
@@ -617,7 +630,7 @@ class PanopticDataset:
         axes = []
         for cam in hd_cameras:
             axis = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
-            
+
             tmat = np.eye(4)
             tmat[:3,:3] = cam['R']
             tmat[:3,3:] = cam['t']
@@ -659,25 +672,25 @@ class PanopticDataset:
     def projectPoints(X, K, R, t, Kd):
         """ Projects points X (3xN) using camera intrinsics K (3x3),
         extrinsics (R,t) and distortion parameters Kd=[k1,k2,p1,p2,k3].
-        
+
         Roughly, x = K*(R*X + t) + distortion
-        
+
         See http://docs.opencv.org/2.4/doc/tutorials/calib3d/camera_calibration/camera_calibration.html
         or cv2.projectPoints
         """
-        
+
         x = np.asarray(R*X + t)
-        
+
         x[0:2,:] = x[0:2,:]/x[2,:]
-        
+
         r = x[0,:]*x[0,:] + x[1,:]*x[1,:]
-        
+
         x[0,:] = x[0,:]*(1 + Kd[0]*r + Kd[1]*r*r + Kd[4]*r*r*r) + 2*Kd[2]*x[0,:]*x[1,:] + Kd[3]*(r + 2*x[0,:]*x[0,:])
         x[1,:] = x[1,:]*(1 + Kd[0]*r + Kd[1]*r*r + Kd[4]*r*r*r) + 2*Kd[3]*x[0,:]*x[1,:] + Kd[2]*(r + 2*x[1,:]*x[1,:])
 
         x[0,:] = K[0,0]*x[0,:] + K[0,1]*x[1,:] + K[0,2]
         x[1,:] = K[1,0]*x[0,:] + K[1,1]*x[1,:] + K[1,2]
-        
+
         return x
 
 

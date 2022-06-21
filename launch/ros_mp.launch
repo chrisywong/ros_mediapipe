@@ -1,0 +1,19 @@
+<launch>
+
+<!-- BAXTER STUFF -->
+  <!-- Run joint trajectory action server node (required for MoveIt!) -->
+  <node pkg="ros_mediapipe" type="CYW_triangulate_ros.py" name="ros_mediapipe" />
+  <!--node pkg="baxter_tools" type="camera_control.py" name="baxter_camera_node" /-->
+
+
+
+
+<!-- Run launch file that runs MoveIt! and opens a Rviz window to visualize baxter and planning scene -->
+  <!--include file="$(find baxter_moveit_config)/launch/demo_baxter.launch" -->
+  <!--include file="$(find baxter_moveit_config)/launch/baxter_grippers.launch" >
+</include-->
+
+  <!-- Open baxter's right hand camera and set the required resolution -->
+  <!--node pkg="baxter_tools" type="camera_control.py" name="open_right_camera" output="screen"  args="-o right_hand_camera -r 1280x800" /-->
+
+</launch>

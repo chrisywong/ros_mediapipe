@@ -12,10 +12,12 @@ import time
 import argparse
 import numpy as np
 import open3d as o3d
+import time
 
 from utils_display import DisplayHand, DisplayBody, DisplayHolistic
 from utils_mediapipe import MediaPipeHand, MediaPipeBody, MediaPipeHolistic
 from utils_3d_reconstruct import Triangulation
+
 
 
 # User select mode
@@ -31,9 +33,11 @@ mode = args.mode
 # Read from .mp4 file
 if args.use_panoptic_dataset:
     # Test with 2 views
-    cam_idx = ['../data/171204_pose1_sample/hdVideos/hd_00_00.mp4',
-               '../data/171204_pose1_sample/hdVideos/hd_00_11.mp4']
-
+    cam_idx = [#'../data/171204_pose1_sample/hdVideos/hd_00_00.mp4',
+               '../data/171204_pose1_sample/hdVideos/hd_00_11.mp4',
+               '../data/171204_pose1_sample/hdVideos/hd_00_28.mp4']
+else:
+    cam_idx = [0,2]
     # # Test with n views
     # num_views = 5 # Note: Maximum 31 hd cameras but processing time will be extremely slow
     # cam_idx = []
@@ -43,6 +47,11 @@ if args.use_panoptic_dataset:
 
 # Start video capture
 cap = [cv2.VideoCapture(cam_idx[i]) for i in range(len(cam_idx))]
+# cap[0].set(3,160)
+# cap[0].set(4,120)
+# cap[1].set(3,160)
+# cap[1].set(4,120)
+
 
 # Define list of other variable
 img   = [None for i in range(len(cam_idx))] # Store image
@@ -51,8 +60,7 @@ disp  = [None for i in range(len(cam_idx))] # Display class
 param = [None for i in range(len(cam_idx))] # Store pose parameter
 prev_time = [time.time() for i in range(len(cam_idx))]
 
-print("Param:")
-print(param)
+print("Num cams:", len(cam_idx))
 
 # Open3D visualization
 vis = o3d.visualization.Visualizer()
@@ -61,7 +69,7 @@ vis.get_render_option().point_size = 5.0
 
 # Load triangulation class
 tri = Triangulation(cam_idx=cam_idx, vis=vis,
-    use_panoptic_dataset=args.use_panoptic_dataset)
+    use_panoptic_dataset=args.use_panoptic_dataset, filename='CYWwebcams')
 
 # Load mediapipe and display class
 if mode=='hand':
@@ -80,13 +88,22 @@ else:
     print('Undefined mode only the following modes are available: \n hand / body / holistic')
     sys.exit()
 
+t_start = time.time()
+
 while True:
     # Loop through video capture
+    # v4l2-ctl --list-devices
     for i, c in enumerate(cap):
         if not c.isOpened():
+            print('Cam',i,'not opened.')
             break
+        # else:
+        #     print("Cam",i, "opened")
         ret, img[i] = c.read()
+        # print(i, len(img[i]), len(img[i][0]))
+        # img[i] = cv2.flip(img[i], 1)
         if not ret:
+            print("Cam",i,"read failed")
             break
 
         # Preprocess image if necessary
@@ -111,16 +128,19 @@ while True:
             for p in param[i]:
                 p['fps'] = fps
         prev_time[i] = curr_time
-        print('========================================')
+        # print('========================================')
         # print(param)
         # print(len(param), len(param[0]))
 
+    # cv2.imshow('img'+str(i), img[0])
+    # cv2.imshow('img', img[0])
+
     # Perform triangulation
-    if args.use_panoptic_dataset:
-        if len(cam_idx)==2:
-            param = tri.triangulate_2views(param, mode)
-        else:
-            param = tri.triangulate_nviews(param, mode)
+    # if args.use_panoptic_dataset:
+    if len(cam_idx)==2:
+        param = tri.triangulate_2views(param, mode)
+    else:
+        param = tri.triangulate_nviews(param, mode)
 
     for i in range(len(cam_idx)):
         # Display 2D keypoint
@@ -129,6 +149,8 @@ while True:
         cv2.imshow('img'+str(i), img[i])
         # Display 3D
         disp[i].draw3d(param[i])
+        print('==========================', i,'==========================')
+        print(param[i])
 
     vis.update_geometry(None)
     vis.poll_events()
