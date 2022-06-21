@@ -2,7 +2,7 @@
 
 <!-- BAXTER STUFF -->
   <!-- Run joint trajectory action server node (required for MoveIt!) -->
-  <node pkg="ros_mediapipe" type="CYW_triangulate_ros.py" name="ros_mediapipe" />
+  <node pkg="ros_mediapipe" type="CYW_triangulate_ros.py" name="ros_mediapipe" output="screen"/>
   <!--node pkg="baxter_tools" type="camera_control.py" name="baxter_camera_node" /-->
 
 

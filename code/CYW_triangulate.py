@@ -38,6 +38,8 @@ if args.use_panoptic_dataset:
                '../data/171204_pose1_sample/hdVideos/hd_00_28.mp4']
 else:
     cam_idx = [0,2]
+    cam_idx = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+    cam_idx = [8,16]
     # # Test with n views
     # num_views = 5 # Note: Maximum 31 hd cameras but processing time will be extremely slow
     # cam_idx = []
@@ -128,9 +130,9 @@ while True:
             for p in param[i]:
                 p['fps'] = fps
         prev_time[i] = curr_time
-        # print('========================================')
-        # print(param)
-        # print(len(param), len(param[0]))
+        print('========================================')
+        print(param)
+        print(len(param), len(param[0]))
 
     # cv2.imshow('img'+str(i), img[0])
     # cv2.imshow('img', img[0])

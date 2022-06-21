@@ -49,7 +49,9 @@ def main():
                  '../data/171204_pose1_sample/hdVideos/hd_00_11.mp4',
                  '../data/171204_pose1_sample/hdVideos/hd_00_28.mp4']
   else:
-      cam_idx = [0,2]
+      # ------------ CHECK LIST OF AVAILABLE CAMERA NUMBERS USING: v4l2-ctl --list-devices
+      # cam_idx = [0,2]
+      cam_idx = [8,16] # For use with Baxter computer
       # # Test with n views
       # num_views = 5 # Note: Maximum 31 hd cameras but processing time will be extremely slow
       # cam_idx = []
@@ -82,7 +84,7 @@ def main():
 
   # Load triangulation class
   tri = Triangulation(cam_idx=cam_idx, vis=vis,
-      use_panoptic_dataset=use_panoptic_dataset, filename='CYWwebcams', JSONpath='/home/cwong/src_UdeS/catkin_ws/src/ros_mediapipe/code/')
+      use_panoptic_dataset=use_panoptic_dataset, filename='CYWwebcams', JSONpath='/home/lucas/my_ws/src/ros_mediapipe/code/')
 
   # Load mediapipe and display class
   if mode=='hand':
@@ -124,6 +126,7 @@ def main():
           #     print("Cam",i, "opened")
           ret, img[i] = c.read()
           # print(i, len(img[i]), len(img[i][0]))
+
           # img[i] = cv2.flip(img[i], 1)
           if not ret:
               print("Cam",i,"read failed")
@@ -155,9 +158,6 @@ def main():
           # print(param)
           # print(len(param), len(param[0]))
 
-      # cv2.imshow('img'+str(i), img[0])
-      # cv2.imshow('img', img[0])
-
       # Perform triangulation
       # if use_panoptic_dataset:
       if len(cam_idx)==2:
@@ -179,15 +179,28 @@ def main():
       vis.poll_events()
       vis.update_renderer()
 
-      # img0 = Image()
-      # img0 =
-      im = np.frombuffer(image_data.data, dtype=np.uint8).reshape(image_data.height, image_data.width, -1)
+      now = rospy.Time.now()
 
-      img0_pub.publish(bridge.cv2_to_imgmsg(img[0], encoding="8UC3"))
+      img0msg = Image(encoding='bgr8')
+      img0msg.header.frame_id = 'cam0'
+      img0msg.header.stamp = now
+      img0msg.height = len(img[0])
+      img0msg.width = len(img[0][0])
+      img0msg.step = img0msg.width * 3
+      img0msg.data = img[0].ravel().tobytes()
+      img0_pub.publish(img0msg)
 
-      # img1 = Image()
-      # img1 = bridge.cv2_to_imgmsg(img[1], encoding="bgr8")
-      # img1_pub.publish(bridge.cv2_to_imgmsg(img[1], encoding="mono8"))
+      img1msg = Image(encoding='bgr8')
+      img1msg.header.frame_id = 'cam1'
+      img1msg.header.stamp = now
+      img1msg.height = len(img[1])
+      img1msg.width = len(img[1][0])
+      img1msg.step = img1msg.width * 3
+      img1msg.data = img[1].ravel().tobytes()
+      img1_pub.publish(img1msg)
+
+      #NEED TO PUBLISH SKELETON KEYPOINTS --> CHECK PARAM
+      # skeleton_pub.publish(skeletonmsg)
 
       key = cv2.waitKey(1)
       if key==27:

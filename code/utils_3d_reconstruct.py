@@ -408,7 +408,7 @@ class Calibration:
 
 
 class Triangulation:
-    def __init__(self, cam_idx, vis=None, use_panoptic_dataset=False, filename=None, JSONpath=None):
+    def __init__(self, cam_idx, vis=None, use_panoptic_dataset=False, filename='', JSONpath='./'):
         super(Triangulation, self).__init__()
 
         #############################
@@ -423,7 +423,7 @@ class Triangulation:
             seq_name = JSONpath
 
         # Load camera calibration param
-        with open(data_path+seq_name+'/calibration_{0}.json'.format(filename)) as f:
+        with open(data_path+seq_name+'calibration_{0}.json'.format(filename)) as f:
             calib = json.load(f)
             # print(calib)
 
